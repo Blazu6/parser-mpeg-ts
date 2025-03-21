@@ -133,6 +133,8 @@ protected:
   uint16_t m_PCR_extension;
 
   uint64_t m_OPCR;
+  uint64_t m_OPCR_base;
+  uint16_t m_OPCR_extension;
 
   uint8_t m_StuffingBytes;
 

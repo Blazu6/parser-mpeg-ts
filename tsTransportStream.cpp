@@ -121,20 +121,25 @@ int32_t xTS_AdaptationField::Parse(const uint8_t* PacketBuffer, uint8_t Adaptati
         m_PCR = 0;
     }
 
-    // Parsowanie OPCR, jeśli jest obecny
-    if (m_OR) {
+        // Parsowanie OPCR, jeśli jest obecny
+    if (m_OR) {  // Sprawdzamy, czy flaga OPCR jest ustawiona
+      // Parsowanie OPCR base (podobnie jak PCR)
+      m_OPCR_base = (PacketBuffer[index] << 25) |  // 6 do 8 bit
+                    (PacketBuffer[index + 1] << 17) | // 7 do 16 bit
+                    (PacketBuffer[index + 2] << 9)  | // 8 do 24 bit
+                    (PacketBuffer[index + 3] << 1)  | // 9 do 32 bit
+                    ((PacketBuffer[index + 4] & 0x80) >> 7);  // ostatni bit w PacketBuffer[4]
+      
+      // Parsowanie OPCR extension
+      m_OPCR_extension = ((PacketBuffer[index + 4] & 0x01) << 8) | PacketBuffer[index + 5];
+      
+      m_OPCR = (m_OPCR_base * 300) + m_OPCR_extension;  // Ostateczna wartość OPCR
 
-
-
-        m_OPCR = ((uint64_t)PacketBuffer[index] << 25) |
-                 ((uint64_t)PacketBuffer[index + 1] << 17) |
-                 ((uint64_t)PacketBuffer[index + 2] << 9)  |
-                 ((uint64_t)PacketBuffer[index + 3] << 1)  |
-                 ((uint64_t)(PacketBuffer[index + 4] & 0x80) >> 7);  // 33-bitowe OPCR
-        index += 6; // Przesuwamy indeks o kolejne 6 bajtów
+      index += 6; // Przesuwamy indeks o 6 bajtów (5 bajtów OPCR + 1 bajt rezerwowy)
     } else {
-        m_OPCR = 0;
+      m_OPCR = 0;  // Jeśli flaga OPCR nie jest ustawiona, ustawiamy OPCR na 0
     }
+
 
     // Obliczanie ilości "stuffing bytes"
     m_StuffingBytes = m_AdaptationFieldLength - (index - 5);
@@ -161,6 +166,7 @@ void xTS_AdaptationField::Print() const
     // Jeśli jest OPCR, drukujemy jego wartość
     if (m_OR) {
         printf(" OPCR=%lu", m_OPCR);
+        printf(" (Time=%.6f s)", static_cast<double>(m_OPCR) / ExtendedClockFrequency_Hz);
     }
 
     // Drukujemy ilość stuffing bytes
