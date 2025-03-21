@@ -113,8 +113,6 @@ int32_t xTS_AdaptationField::Parse(const uint8_t* PacketBuffer, uint8_t Adaptati
         //pomijam 6 bitów zarezerwowanych wiec do extension zostaje mi ostani bit PacketBuffer[10]
         m_PCR_extension = ((PacketBuffer[index + 4] & 0x01) << 8) | PacketBuffer[index + 5];
         
-
-
         m_PCR = (m_PCR_base * 300) + m_PCR_extension;
                 
                 // 33-bitowe PCR
@@ -125,6 +123,9 @@ int32_t xTS_AdaptationField::Parse(const uint8_t* PacketBuffer, uint8_t Adaptati
 
     // Parsowanie OPCR, jeśli jest obecny
     if (m_OR) {
+
+
+
         m_OPCR = ((uint64_t)PacketBuffer[index] << 25) |
                  ((uint64_t)PacketBuffer[index + 1] << 17) |
                  ((uint64_t)PacketBuffer[index + 2] << 9)  |
@@ -154,6 +155,7 @@ void xTS_AdaptationField::Print() const
     // Jeśli jest PCR, drukujemy jego wartość
     if (m_PR) {
         printf(" PCR=%lu", m_PCR);
+        printf(" (Time=%.6f s)", static_cast<double>(m_PCR) / ExtendedClockFrequency_Hz);
     }
 
     // Jeśli jest OPCR, drukujemy jego wartość

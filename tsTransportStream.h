@@ -112,7 +112,7 @@ public:
 
 //=============================================================================================================================================================================
 
-class xTS_AdaptationField
+class xTS_AdaptationField : public xTS
 {
 protected:
   //setup
@@ -131,6 +131,7 @@ protected:
   uint64_t m_PCR;
   uint64_t m_PCR_base;
   uint16_t m_PCR_extension;
+
   uint64_t m_OPCR;
 
   uint8_t m_StuffingBytes;

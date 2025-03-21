@@ -27,7 +27,7 @@ int main(int argc, char *argv[], char *envp[])
   uint8_t TS_PacketBuffer[xTS::TS_PacketLength];
   size_t bytesRead;
 
-while (!feof(inputFile) && TS_PacketId < 190) {
+while (!feof(inputFile) && TS_PacketId < 43794) {
     bytesRead = fread(TS_PacketBuffer, 1, xTS::TS_PacketLength, inputFile);
     if (bytesRead != xTS::TS_PacketLength) {
       if (feof(inputFile)) {
