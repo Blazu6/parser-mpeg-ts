@@ -53,7 +53,7 @@ public:
 
 //=============================================================================================================================================================================
 
-class xTS_PacketHeader
+class xTS_PacketHeader : public xTS
 {
 public:
   enum class ePID : uint16_t
@@ -94,7 +94,6 @@ public:
   void     Print() const;
 
 public:
-  //TODO - direct acces to header field value, e.g.:
   uint8_t  getSyncByte() const { return m_SB; } 
   uint8_t  getErrorFlag() const { return m_E; }
   uint8_t  getStartFlag() const { return m_S; }
@@ -105,7 +104,6 @@ public:
   uint8_t getCC() const { return m_CC; } 
 
 public:
-  //TODO - derrived informations
   bool     hasAdaptationField() const { return (m_AFC == 2 || m_AFC == 3); }
   bool     hasPayload        () const { return (m_AFC == 1 || m_AFC == 3); }
 };
@@ -127,7 +125,7 @@ protected:
   uint8_t m_SF;
   uint8_t m_TP;
   uint8_t m_EX;
-  //optional fields - PCR
+  //optional fields - PCR, OPCR, Stuffing bytes
   uint64_t m_PCR;
   uint64_t m_PCR_base;
   uint16_t m_PCR_extension;
@@ -148,4 +146,73 @@ public:
   uint8_t getAdaptationFieldLength () const { return m_AdaptationFieldLength ; }
   //derived values
   uint32_t getNumBytes () const { return 1 + m_AdaptationFieldLength; }
+};
+
+//=============================================================================================================================================================================
+
+class xPES_PacketHeader
+{
+  public:
+  enum eStreamId : uint8_t
+  {
+    eStreamId_program_stream_map = 0xBC,
+    eStreamId_padding_stream = 0xBE,
+    eStreamId_private_stream_2 = 0xBF,
+    eStreamId_ECM = 0xF0,
+    eStreamId_EMM = 0xF1,
+    eStreamId_program_stream_directory = 0xFF,
+    eStreamId_DSMCC_stream = 0xF2,
+    eStreamId_ITUT_H222_1_type_E = 0xF8,
+  };
+  protected:
+    //PES packet header
+    uint32_t m_PacketStartCodePrefix;
+    uint8_t m_StreamId;
+    uint16_t m_PacketLength;
+  public:
+    void Reset();
+    int32_t Parse(const uint8_t* Input);
+    void Print() const;
+  public:
+    //PES packet header
+    uint32_t getPacketStartCodePrefix() const { return m_PacketStartCodePrefix; }
+    uint8_t getStreamId () const { return m_StreamId; }
+    uint16_t getPacketLength () const { return m_PacketLength; }
+};
+
+//=============================================================================================================================================================================
+
+class xPES_Assembler
+{
+  public:
+    enum class eResult : int32_t
+    {
+      UnexpectedPID = 1,
+      StreamPackedLost ,
+      AssemblingStarted ,
+      AssemblingContinue,
+      AssemblingFinished,
+    };
+  protected:
+    //setup
+    int32_t m_PID;
+    //buffer
+    uint8_t* m_Buffer;
+    uint32_t m_BufferSize;
+    uint32_t m_DataOffset;
+    //operation
+    int8_t m_LastContinuityCounter;
+    bool m_Started;
+    xPES_PacketHeader m_PESH;
+  public:
+    xPES_Assembler ();
+    ~xPES_Assembler();
+    void Init (int32_t PID);
+    eResult AbsorbPacket(const uint8_t* TransportStreamPacket, const xTS_PacketHeader* PacketHeader, const xTS_AdaptationField* AdaptationField);
+    void PrintPESH () const { m_PESH.Print(); }
+    uint8_t* getPacket () { return m_Buffer; }
+    int32_t getNumPacketBytes() const { return m_DataOffset; }
+    protected:
+    void xBufferReset ();
+    void xBufferAppend(const uint8_t* Data, int32_t Size);
 };

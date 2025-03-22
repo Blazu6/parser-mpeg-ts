@@ -77,13 +77,13 @@ corresponding TS packet header
 */
 int32_t xTS_AdaptationField::Parse(const uint8_t* PacketBuffer, uint8_t AdaptationFieldControl)
 {
-    if (PacketBuffer == nullptr) {
+   if (PacketBuffer == nullptr) {
         std::cerr << "Error: Adaptation field buffer is null!" << std::endl;
         return -1;
     }
 
     if (AdaptationFieldControl != 2 && AdaptationFieldControl != 3) {
-        return -1; // Brak Adaptation Field
+        return -1; 
     }
 
     m_AdaptationFieldLength = PacketBuffer[4];
@@ -100,9 +100,8 @@ int32_t xTS_AdaptationField::Parse(const uint8_t* PacketBuffer, uint8_t Adaptati
     m_TP = (PacketBuffer[index] & 0x02) >> 1;
     m_EX = (PacketBuffer[index] & 0x01);
     
-    index++;  // Przechodzimy do kolejnych bajtów Adaptation Field
+    index++;
 
-    // Parsowanie PCR, jeśli jest obecny
     if (m_PR) {
         //teraz packetBuffer[6]
         m_PCR_base = (PacketBuffer[index] << 25) |  //caly 6 to 8 bit
@@ -121,14 +120,12 @@ int32_t xTS_AdaptationField::Parse(const uint8_t* PacketBuffer, uint8_t Adaptati
         m_PCR = 0;
     }
 
-        // Parsowanie OPCR, jeśli jest obecny
-    if (m_OR) {  // Sprawdzamy, czy flaga OPCR jest ustawiona
-      // Parsowanie OPCR base (podobnie jak PCR)
-      m_OPCR_base = (PacketBuffer[index] << 25) |  // 6 do 8 bit
-                    (PacketBuffer[index + 1] << 17) | // 7 do 16 bit
-                    (PacketBuffer[index + 2] << 9)  | // 8 do 24 bit
-                    (PacketBuffer[index + 3] << 1)  | // 9 do 32 bit
-                    ((PacketBuffer[index + 4] & 0x80) >> 7);  // ostatni bit w PacketBuffer[4]
+    if (m_OR) { 
+      m_OPCR_base = (PacketBuffer[index] << 25) | 
+                    (PacketBuffer[index + 1] << 17) | 
+                    (PacketBuffer[index + 2] << 9)  | 
+                    (PacketBuffer[index + 3] << 1)  | 
+                    ((PacketBuffer[index + 4] & 0x80) >> 7); 
       
       // Parsowanie OPCR extension
       m_OPCR_extension = ((PacketBuffer[index + 4] & 0x01) << 8) | PacketBuffer[index + 5];
@@ -140,11 +137,9 @@ int32_t xTS_AdaptationField::Parse(const uint8_t* PacketBuffer, uint8_t Adaptati
       m_OPCR = 0;  // Jeśli flaga OPCR nie jest ustawiona, ustawiamy OPCR na 0
     }
 
-
-    // Obliczanie ilości "stuffing bytes"
     m_StuffingBytes = m_AdaptationFieldLength - (index - 5);
     if (m_StuffingBytes < 0) {
-        m_StuffingBytes = 0; // Zapobiegamy ujemnej wartości
+        m_StuffingBytes = 0;
     }
 
     return m_AdaptationFieldLength + 1;
@@ -171,5 +166,54 @@ void xTS_AdaptationField::Print() const
 
     // Drukujemy ilość stuffing bytes
     printf(" StuffingBytes=%d", m_StuffingBytes);
+
+}
+
+//=============================================================================================================================================================================
+
+void xPES_PacketHeader::Reset()
+{
+  m_PacketStartCodePrefix = 0;
+  m_StreamId = 0;
+  m_PacketLength = 0;
+}
+
+int32_t xPES_PacketHeader::Parse(const uint8_t* Input)
+{
+  if (Input == nullptr) {
+    return -1;
+  }
+  m_PacketStartCodePrefix = (Input[0] << 16) | (Input[1] << 8) | Input[2];
+  m_StreamId = Input[3];
+  m_PacketLength = (Input[4] << 8) | Input[5];
+  return 6;
+}
+
+void xPES_PacketHeader::Print() const
+{
+  printf(" PES:PSCP=%1d SID=%3d L=%4d",
+         m_PacketStartCodePrefix, m_StreamId, m_PacketLength);
+}
+
+//=============================================================================================================================================================================
+
+void xPES_Assembler::Init (int32_t PID)
+{
+  
+}
+
+
+xPES_Assembler::eResult AbsorbPacket(const uint8_t* TransportStreamPacket, const xTS_PacketHeader* PacketHeader, const xTS_AdaptationField* AdaptationField)
+{
+
+}
+
+void xPES_Assembler::xBufferReset ()
+{
+
+}
+    
+void xPES_Assembler::xBufferAppend(const uint8_t* Data, int32_t Size)
+{
 
 }
