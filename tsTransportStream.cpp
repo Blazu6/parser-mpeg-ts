@@ -114,7 +114,6 @@ int32_t xTS_AdaptationField::Parse(const uint8_t* PacketBuffer, uint8_t Adaptati
         
         m_PCR = (m_PCR_base * 300) + m_PCR_extension;
                 
-                // 33-bitowe PCR
         index += 6; // Przesuwamy indeks o 6 bajtów (5 bajtów PCR + 1 bajt rezerwowy)
     } else {
         m_PCR = 0;
