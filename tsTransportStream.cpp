@@ -195,24 +195,95 @@ void xPES_PacketHeader::Print() const
 }
 
 //=============================================================================================================================================================================
-
-void xPES_Assembler::Init (int32_t PID)
+// Constructor: initialize variables and buffer pointer
+xPES_Assembler::xPES_Assembler()
+    : m_PID(-1),
+      m_Buffer(nullptr),
+      m_BufferSize(0),
+      m_DataOffset(0),
+      m_LastContinuityCounter(-1),
+      m_Started(false)
 {
-  
+    // Optionally, allocate initial memory or leave it for Init()
+}
+
+// Destructor: free allocated memory
+xPES_Assembler::~xPES_Assembler() {
+    if (m_Buffer) {
+        delete[] m_Buffer;
+        m_Buffer = nullptr;
+    }
 }
 
 
-xPES_Assembler::eResult AbsorbPacket(const uint8_t* TransportStreamPacket, const xTS_PacketHeader* PacketHeader, const xTS_AdaptationField* AdaptationField)
+void xPES_Assembler::Init(int32_t PID)
 {
-
-}
-
-void xPES_Assembler::xBufferReset ()
-{
-
-}
+    m_PID = PID;              // Ustawienie identyfikatora strumienia
+    m_LastContinuityCounter = -1; // Resetowanie ostatniego CC
+    m_Started = false;        // Ustawienie stanu, że jeszcze nie rozpoczęto składania PES
     
-void xPES_Assembler::xBufferAppend(const uint8_t* Data, int32_t Size)
-{
-
+    // Resetujemy bufor, jeśli jest używany (tu przykładowo, jeśli m_Buffer to std::vector<uint8_t>)
+    // Jeśli używasz surowego wskaźnika, trzeba go zwolnić i przydzielić ponownie
+    if (m_Buffer) {
+        delete[] m_Buffer;
+    }
+    // Ustal maksymalny rozmiar bufora, np. 65536 bajtów
+    m_BufferSize = 65536;
+    m_Buffer = new uint8_t[m_BufferSize];
+    m_DataOffset = 0;
 }
+
+
+
+xPES_Assembler::eResult xPES_Assembler::AbsorbPacket(const uint8_t* TransportStreamPacket, const xTS_PacketHeader* PacketHeader, const xTS_AdaptationField* AdaptationField)
+{
+  uint8_t curentCC = PacketHeader->getCC();
+  if (m_LastContinuityCounter >= 0 && (m_LastContinuityCounter + 1) % 16 != curentCC) {
+    return eResult::StreamPackedLost;
+  }
+  m_LastContinuityCounter = curentCC; //sprawdzenie ciągłości pakietów
+
+  if (PacketHeader->getStartFlag() == 1) {//flaga startu poczatek PES
+    m_PESH.Reset();
+    m_PESH.Parse(TransportStreamPacket);
+    return eResult::AssemblingStarted;
+  }
+}
+
+
+/*
+void xPES_Assembler::xBufferReset()
+{
+    if (m_Buffer != nullptr) {
+        delete[] m_Buffer;
+        m_Buffer = nullptr;
+    }
+    m_BufferSize = 0;
+    m_DataOffset = 0;
+}
+
+void xPES_Assembler::xBufferAppend(const uint8_t *input, int32_t size) {
+    // Calculate new total size after appending
+    uint32_t newSize = m_DataOffset + size;
+    // Allocate a new buffer of the new size
+    uint8_t *newBuffer = new uint8_t[newSize];
+    
+    // If there's existing data, copy it into the new buffer
+    if (m_Buffer != nullptr && m_DataOffset > 0) {
+        std::memcpy(newBuffer, m_Buffer, m_DataOffset);
+        delete[] m_Buffer;  // Free the old buffer
+    }
+    
+    // Append new data at the end of the current data
+    std::memcpy(newBuffer + m_DataOffset, input, size);
+    
+    // Update our data offset and pointer
+    m_DataOffset = newSize;
+    m_Buffer = newBuffer;
+    m_BufferSize = newSize;  // In this simple model, m_BufferSize equals the used size
+}
+*/
+
+
+    
+

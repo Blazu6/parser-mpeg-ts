@@ -2,6 +2,7 @@
 #include "tsCommon.h"
 #include <string>
 #include <iostream>
+#include <cstring>
 
 /*
 MPEG-TS packet:
