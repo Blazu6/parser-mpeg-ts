@@ -218,19 +218,7 @@ xPES_Assembler::~xPES_Assembler() {
 
 void xPES_Assembler::Init(int32_t PID)
 {
-    m_PID = PID;              // Ustawienie identyfikatora strumienia
-    m_LastContinuityCounter = -1; // Resetowanie ostatniego CC
-    m_Started = false;        // Ustawienie stanu, że jeszcze nie rozpoczęto składania PES
     
-    // Resetujemy bufor, jeśli jest używany (tu przykładowo, jeśli m_Buffer to std::vector<uint8_t>)
-    // Jeśli używasz surowego wskaźnika, trzeba go zwolnić i przydzielić ponownie
-    if (m_Buffer) {
-        delete[] m_Buffer;
-    }
-    // Ustal maksymalny rozmiar bufora, np. 65536 bajtów
-    m_BufferSize = 65536;
-    m_Buffer = new uint8_t[m_BufferSize];
-    m_DataOffset = 0;
 }
 
 
@@ -243,46 +231,49 @@ xPES_Assembler::eResult xPES_Assembler::AbsorbPacket(const uint8_t* TransportStr
   }
   m_LastContinuityCounter = curentCC; //sprawdzenie ciągłości pakietów
 
+  int payloadStart = 4; // TS nagłówek
+    if (PacketHeader->hasAdaptationField()) {
+        payloadStart += AdaptationField->getAdaptationFieldLength() + 1;
+    }
+
+    const uint8_t* payload = TransportStreamPacket + payloadStart;
+
   if (PacketHeader->getStartFlag() == 1) {//flaga startu poczatek PES
     m_PESH.Reset();
-    m_PESH.Parse(TransportStreamPacket);
+    m_PESH.Parse(payload);
+    xBufferReset();
+    m_BufferSize = m_PESH.getPacketLength();
+    if (m_BufferSize > 0) {
+      m_Buffer = new uint8_t[m_BufferSize];
+    }
+     xBufferAppend(payload + 6, m_PESH.getPacketLength());
     return eResult::AssemblingStarted;
   }
+  return eResult::AssemblingContinue;
 }
 
 
-/*
+
 void xPES_Assembler::xBufferReset()
 {
-    if (m_Buffer != nullptr) {
-        delete[] m_Buffer;
-        m_Buffer = nullptr;
-    }
-    m_BufferSize = 0;
-    m_DataOffset = 0;
+  if (m_Buffer != nullptr) {
+      delete[] m_Buffer;
+      m_Buffer = nullptr;
+  }
+  m_BufferSize = 0;
+  m_DataOffset = 0;
 }
 
-void xPES_Assembler::xBufferAppend(const uint8_t *input, int32_t size) {
-    // Calculate new total size after appending
-    uint32_t newSize = m_DataOffset + size;
-    // Allocate a new buffer of the new size
-    uint8_t *newBuffer = new uint8_t[newSize];
-    
-    // If there's existing data, copy it into the new buffer
-    if (m_Buffer != nullptr && m_DataOffset > 0) {
-        std::memcpy(newBuffer, m_Buffer, m_DataOffset);
-        delete[] m_Buffer;  // Free the old buffer
+void xPES_Assembler::xBufferAppend(const uint8_t *input, int32_t size) 
+{
+   if (m_DataOffset + size > m_BufferSize) {
+        std::cerr << "Error: Buffer overflow!" << std::endl;
+        return;
     }
-    
-    // Append new data at the end of the current data
-    std::memcpy(newBuffer + m_DataOffset, input, size);
-    
-    // Update our data offset and pointer
-    m_DataOffset = newSize;
-    m_Buffer = newBuffer;
-    m_BufferSize = newSize;  // In this simple model, m_BufferSize equals the used size
+    memcpy(m_Buffer + m_DataOffset, input, size); // Kopiowanie danych do bufora
+    m_DataOffset += size; // Aktualizacja offsetu
 }
-*/
+
 
 
     

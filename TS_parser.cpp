@@ -23,7 +23,6 @@ int main(int argc, char *argv[], char *envp[])
   xTS_PacketHeader    TS_PacketHeader;
   xTS_AdaptationField TS_AdaptationField;
   xPES_Assembler PES_Assembler;
-  PES_Assembler.Init(136);  // Ustaw PID dla Assemblera
 
   int32_t TS_PacketId = 0;
   uint8_t TS_PacketBuffer[xTS::TS_PacketLength];
@@ -63,20 +62,14 @@ int main(int argc, char *argv[], char *envp[])
         printf(" ");
         TS_AdaptationField.Print();
       }
-      int payloadStart = 4; // TS nagłówek
-        if (TS_PacketHeader.hasAdaptationField()) 
-        {
-            payloadStart += TS_AdaptationField.getAdaptationFieldLength() + 1;
-        }
-      const uint8_t* payload = TS_PacketBuffer + payloadStart;
 
-      xPES_Assembler::eResult Result = PES_Assembler.AbsorbPacket(payload, &TS_PacketHeader, &TS_AdaptationField);
+      xPES_Assembler::eResult Result = PES_Assembler.AbsorbPacket(TS_PacketBuffer, &TS_PacketHeader, &TS_AdaptationField);
       switch(Result)
       {
-        case xPES_Assembler::eResult::StreamPackedLost : printf("PcktLost "); break;
-        case xPES_Assembler::eResult::AssemblingStarted : printf("Started "); PES_Assembler.PrintPESH(); break;
-        case xPES_Assembler::eResult::AssemblingContinue: printf("Continue "); break;
-        case xPES_Assembler::eResult::AssemblingFinished: printf("Finished "); printf("PES: Len=%d", PES_Assembler.getNumPacketBytes()); break;
+        case xPES_Assembler::eResult::StreamPackedLost : printf(" PcktLost "); break;
+        case xPES_Assembler::eResult::AssemblingStarted : printf(" Started "); PES_Assembler.PrintPESH(); break;
+        case xPES_Assembler::eResult::AssemblingContinue: printf(" Continue "); break;
+        case xPES_Assembler::eResult::AssemblingFinished: printf(" Finished "); printf("PES: Len=%d", PES_Assembler.getNumPacketBytes()); break;
         default: break;
       }
     
